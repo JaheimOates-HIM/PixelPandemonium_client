@@ -1,0 +1,58 @@
+layout: default-blank
+permalink: /TeacherDashboard
+title: "Pixel Pandemonium - Teacher Dashboard"
+serverlink: "http://localhost:8000"
+---
+<h1>Pixel Pandemonium - Teacher Dashboard</h1>
+<h2>Create New Instance</h2>
+<label>Picture:</label><select id="pictureSelect"><option value="tetris">Tetris</option></select><br><br>
+<label>Name (Last, First):</label><input type="text" id="teacherName" placeholder="Mongan, Bill" size="30"><br><br>
+<label>Date:</label><input type="date" id="instanceDate"> <label>Time:</label><input type="time" id="instanceTime"><br><br>
+<button onclick="doCreate()">Create Instance</button>
+<div id="resultArea" style="display:none;margin-top:20px;padding:15px;border:2px solid #2E75B6;background:#F2F7FB">
+  <h3>Instance Created!</h3>
+  <p><b>Code:</b> <span id="rCode" style="font-family:monospace;font-size:18px"></span></p>
+  <p><b>Student URL:</b> <span id="rUrl" style="font-family:monospace;word-break:break-all"></span></p>
+  <p><b>Expires:</b> <span id="rExp"></span></p>
+  <button onclick="navigator.clipboard.writeText(document.getElementById('rUrl').textContent).then(()=>alert('Copied!'))">Copy URL</button>
+</div>
+<h2 style="margin-top:30px">Active Instances</h2>
+<div id="instList"><em>Create an instance to see it here.</em></div>
+<script>
+var SERVER_URL = '{{ page.serverlink }}';
+var now = new Date();
+document.getElementById('instanceDate').value = now.toISOString().split('T')[0];
+document.getElementById('instanceTime').value = now.toTimeString().substring(0,5);
+var instances = [];
+async function doCreate() {
+  var pId=document.getElementById('pictureSelect').value,tn=document.getElementById('teacherName').value;
+  var d=document.getElementById('instanceDate').value,tm=document.getElementById('instanceTime').value;
+  if (!tn||!tn.includes(',')) { alert('Enter name as Last, First'); return; }
+  try {
+    var r = await fetch(SERVER_URL+'/instance/create',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pictureId:pId,teacherName:tn,dateTime:new Date(d+'T'+tm).toISOString()})});
+    var j = await r.json();
+    if (r.ok) {
+      document.getElementById('rCode').textContent=j.instanceCode;
+      document.getElementById('rUrl').textContent=j.shareableUrl;
+      document.getElementById('rExp').textContent=new Date(j.expiresAt).toLocaleString();
+      document.getElementById('resultArea').style.display='block';
+      instances.push(j); refreshList();
+    } else alert('Error: '+(j.error||'Unknown'));
+  } catch(e) { alert('Cannot connect to server.'); }
+}
+async function doReset(code) {
+  if (!confirm('Reset '+code+'? All pixel data deleted.')) return;
+  try { var r=await fetch(SERVER_URL+'/instance/'+code+'/reset',{method:'POST'});
+    alert((await r.json()).message); } catch(e) { alert('Error.'); }
+}
+function refreshList() {
+  if (!instances.length) return;
+  var h='<table border=1 cellpadding=8><tr><th>Code</th><th>URL</th><th>Expires</th><th>Actions</th></tr>';
+  instances.forEach(function(inst){h+='<tr><td>'+inst.instanceCode+'</td><td style="word-break:break-all">'+
+    inst.shareableUrl+'</td><td>'+new Date(inst.expiresAt).toLocaleString()+'</td><td><button onclick="doReset(\''+
+    inst.instanceCode+'\')" >Reset</button></td></tr>';});
+  document.getElementById('instList').innerHTML=h+'</table>';
+}
+</script>

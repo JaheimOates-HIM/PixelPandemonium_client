@@ -1,33 +1,3 @@
----
-layout: default-blank
-permalink: /Instructions
-title: "Pixel Pandemonium Instructions"
-excerpt: "Pixel Pandemonium Instructions"
-
-instructionsjs: "/files/drawingcanvas-tetris/Post-It_tetris_composite.js"
-
-canvascolors: 11  
-    
-numcols: 1
-numrows: 1
-
-subcols: 5
-subrows: 3
-
-canvaswidth: 500
-canvasheight: 300
-
-colorpickerwidth: 64
-colorpickerheight: 64
-
-fayelink: "https://faye-pub-sub-and-replay-data-store-multi-image-BillJr99.replit.app"
-replaylink: "https://faye-pub-sub-and-replay-data-store-multi-image-BillJr99.replit.app"
-linksuffix: "tetris"
-
-rectangleepsilon: 2
-
----
-
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -40,29 +10,26 @@ rectangleepsilon: 2
 	}
     
     #canvascontainer {
-     width: {{ page.canvaswidth | plus:100 }}px;
-     height: {{ page.canvasheight | plus:10 }}px;
+     width: 600px;
+    height: 310px;
+        margin: 0;
+        padding: 0;
+        display: inline-block;
     }    
     
     #maincanvascontainer { 
      float: left;
-     width: {{ page.canvaswidth }}px;
-     height: {{ page.canvasheight }}px;
+     width: 500px;
+    height: 300px;
      margin: 0;
      padding: 0;
      display: inline-block;
     }    
 </style>
 
-{% if page.fayelink %}
-<!-- Run corresponding repl.it -->
-<script type="text/javascript" 
-        src="{{ page.fayelink }}/faye/client.js">
-        </script>
-{% endif %}
 
-<script language="javascript" type="text/javascript" src="{{ page.instructionsjs }}?t={{ site.time | date_to_xmlschema }}"></script>
-<script language="javascript" type="text/javascript">
+<script src="/files/drawingcanvas-tetris/Post-It_tetris_composite.js"></script>
+<script>
 function showPixelMap(page)
 	{
         if(page === '') {
@@ -99,7 +66,129 @@ function showPixelMap(page)
 		}
 		var lastPart = '</table>' ;
 		tbl.innerHTML = topRow + interior + lastPart ;
-	}
+
+    // 9.1 getTileStatus
+function getTileStatus(majorRow, majorCol) {
+  var startR = majorRow*subrows, startC = majorCol*subcols;
+  var total = subrows*subcols, filled = 0, errors = 0;
+  var colLetter = String.fromCharCode('A'.charCodeAt(0)+majorCol);
+  var pageIdx = lookupPage(pages, String(majorRow+1), colLetter);
+  var expected = pageIdx >= 0 ? pages[pageIdx].uncompressed : null;
+  for (var r=0; r<subrows; r++) {
+    for (var cc=0; cc<subcols; cc++) {
+      var data = isPageFilledIn[startR+r][startC+cc];
+      if (data && data.trim().length > 0) {
+        filled++;
+        if (expected) {
+          var actual = data.split(',')[4];
+          var exp = rgbToHex(palette[expected[r*subcols+cc]][0],
+            palette[expected[r*subcols+cc]][1],palette[expected[r*subcols+cc]][2]);
+          if (actual !== exp) errors++;
+        }
+      }
+    }
+  }
+  if (filled === 0) return 'blank';
+  if (errors > 0) return 'error';  // Goal 9: errors = incomplete
+  if (filled < total) return 'in-progress';
+  return 'complete';
+}
+
+// 9.2 highlightError 
+function highlightErrors(majorRow, majorCol) {
+  var colLetter = String.fromCharCode('A'.charCodeAt(0)+majorCol);
+  var pageIdx = lookupPage(pages, String(majorRow+1), colLetter);
+  if (pageIdx < 0) return;
+  var expected = pages[pageIdx].uncompressed;
+  var subW = gridwidth/subcols, subH = gridheight/subrows;
+  for (var r=0; r<subrows; r++) {
+    for (var cc=0; cc<subcols; cc++) {
+      var data = isPageFilledIn[majorRow*subrows+r][majorCol*subcols+cc];
+      if (data && data.trim().length > 0) {
+        var actual = data.split(',')[4];
+        var exp = rgbToHex(palette[expected[r*subcols+cc]][0],
+          palette[expected[r*subcols+cc]][1],palette[expected[r*subcols+cc]][2]);
+        if (actual !== exp) {
+          ctx.strokeStyle='#FF0000'; ctx.lineWidth=3;
+          ctx.strokeRect(cc*subW+2, r*subH+2, subW-4, subH-4);
+          ctx.lineWidth=1;
+        }
+      }
+    }
+  }
+}
+
+
+// 7.2 render tile selector with page status
+function renderTileSelector() {
+  var sel = document.getElementById('tileSelectorCanvas');
+  if (!sel) return;
+  var ctx2 = sel.getContext('2d');
+  var tW = sel.width / numCols, tH = sel.height / numRows;
+  ctx2.clearRect(0, 0, sel.width, sel.height);
+  for (var j = 0; j < numCols; j++) {
+    for (var ii = 0; ii < numRows; ii++) {
+      var st = getTileStatus(ii, j);
+      var x = j*tW, y = ii*tH;
+      switch(st) {
+        case 'blank': ctx2.fillStyle='#FFF'; break;
+        case 'complete': ctx2.fillStyle='#CCC'; break;
+        case 'in-progress': ctx2.fillStyle='#CCE5FF'; break;
+        case 'error': ctx2.fillStyle='#FFE0B2'; break;
+      }
+      ctx2.fillRect(x+1,y+1,tW-2,tH-2);
+      var label = String.fromCharCode('A'.charCodeAt(0)+j)+(ii+1);
+      ctx2.fillStyle = st==='complete'?'#999':'#333';
+      ctx2.font = '14px Arial';
+      ctx2.fillText(label, x+tW/2-10, y+tH/2+5);
+      ctx2.strokeStyle='#333'; ctx2.lineWidth=1;
+      ctx2.strokeRect(x,y,tW,tH);
+    }
+  }
+}
+// 7.3 click handler for tile selector
+document.getElementById('tileSelectorCanvas')
+  .addEventListener('click', function(e) {
+    var rect = this.getBoundingClientRect();
+    var col = Math.floor((e.clientX-rect.left) / (this.width/numCols));
+    var row = Math.floor((e.clientY-rect.top) / (this.height/numRows));
+
+    if (getTileStatus(row,col)==='complete') {
+      document.getElementById('tileStatusText').textContent='Already complete.';
+      return;
+    }
+
+    selectTile(row, col);
+});
+
+// selecttile 
+function selectTile(majorRow, majorCol) {
+  var colLetter = String.fromCharCode('A'.charCodeAt(0)+majorCol);
+  document.getElementById('pageCol').value = colLetter;
+  document.getElementById('pageRow').value = majorRow + 1;
+  getPageData(pages);
+  document.getElementById('tileStatusText').textContent =
+    'Selected: ' + colLetter + (majorRow+1);
+  renderTileSelector();
+}
+  
+
+// autoselecttile implementation 
+function autoSelectTile() {
+  var best = null;
+  for (var j=0; j<numCols&&!best; j++)
+    for (var i=0; i<numRows&&!best; i++)
+      if (getTileStatus(i,j)==='blank') best={row:i,col:j};
+  if (!best) for (var j=0; j<numCols&&!best; j++)
+    for (var i=0; i<numRows&&!best; i++)
+      if (getTileStatus(i,j)==='error') best={row:i,col:j};
+  if (!best) for (var j=0; j<numCols&&!best; j++)
+    for (var i=0; i<numRows&&!best; i++)
+      if (getTileStatus(i,j)==='in-progress') best={row:i,col:j};
+  if (best) selectTile(best.row, best.col);
+  else document.getElementById('tileStatusText').textContent =
+    'All tiles complete! Great work!';
+}
 
 function lookupPage(pages,row,col)
 {
@@ -217,7 +306,18 @@ function getPageData(pages)
 				   pages[numCols*numRows-1].col + 
 				   "</b>, and rows numbered from <b>1-" + numRows + "</b>")
 </script>
-</p>
+<h3>Choose a Tile to Work On</h3>
+<p>Click a white (available) or orange (has errors) tile.</p>
+<canvas id="tileSelectorCanvas" width="400" height="400"
+  style="border:2px solid #333;cursor:pointer"></canvas><br>
+<p id="tileStatusText" style="font-weight:bold"></p>
+<div style="display:flex;gap:15px;flex-wrap:wrap">
+  <span><span style="display:inline-block;width:20px;height:20px;background:white;border:1px solid #ccc"></span> Available</span>
+  <span><span style="display:inline-block;width:20px;height:20px;background:#CCE5FF;border:1px solid #ccc"></span> In Progress</span>
+  <span><span style="display:inline-block;width:20px;height:20px;background:#FFE0B2;border:1px solid #ccc"></span> Has Errors</span>
+  <span><span style="display:inline-block;width:20px;height:20px;background:#CCC;border:1px solid #ccc"></span> Complete</span>
+</div>
+
 <p>
 	Select a page column and row from the drop-down menus
 	below, then click "Select Page" to get 
@@ -287,7 +387,6 @@ The code provided below (&ldquo;Your Data&rdquo;) represents the {{ page.subrows
 	</div>
 </indent><p>&nbsp;</p>
 
-{% if page.surveylink %}
 <p>
 Please take a <a href="{{ page.surveylink }}">short survey</a> about this activity to help us in the development of this activity!
 </p>
@@ -335,6 +434,59 @@ Click on a color below, and then click on each of the rectangles below to fill i
 var canvas = document.getElementById('drawCanvas');
 var ctx = canvas.getContext('2d');
 var colorpicker = document.getElementById('colorpicker');
+
+var SERVER_URL = 'http://localhost:8000';
+
+var urlParams = new URLSearchParams(window.location.search);
+var instanceCode = urlParams.get('instance');
+if (!instanceCode) {
+  document.body.innerHTML = '<h2 style="color:red">No instance code in URL.</h2>' +
+    '<p>Please use the URL myour teacher gave you.</p>';
+  throw new Error('No instance code');
+}
+
+function clientValidateCheckDigit(code) {
+  var digits = code.replace(/[^0-9]/g, '');
+  if (digits.length < 2) return false;
+  var payload = digits.slice(0, -1), sum = 0, alt = true;
+  for (var i = payload.length - 1; i >= 0; i--) {
+    var n = parseInt(payload[i], 10);
+    if (alt) { n *= 2; if (n > 9) n -= 9; }
+    sum += n; alt = !alt;
+  }
+  return ((10 - (sum % 10)) % 10) === parseInt(digits.slice(-1), 10);
+}
+
+if (!clientValidateCheckDigit(instanceCode)) {
+  document.body.innerHTML = '<h2 style="color:red">Invalid instance code (typo?).</h2>' +
+    '<p>Please double-check the URL your teacher gave you.</p>';
+  throw new Error('Invalid check digit');
+}
+console.log('Instance code validated: ' + instanceCode);
+
+ async function validateInstance() {
+  try {
+    var res = await fetch(
+      SERVER_URL + '/instance/' + instanceCode + '/status');
+    var data = await res.json();
+    if (!data.valid) {
+      document.body.innerHTML =
+        '<h2 style="color:red">This instance is no longer active.</h2>' +
+        '<p>' + (data.error || 'Unknown error') + '</p>';
+      return false;
+    }
+    // Optionally: use data.pictureId to dynamically load
+    // the correct image JS file (see Stretch Goals, Part 11)
+    return true;
+  } catch (err) {
+    console.error('Validation error:', err);
+    document.body.innerHTML =
+      '<h2 style="color:red">Cannot connect to server.</h2>' +
+      '<p>Please check that the server is running.</p>';
+    return false;
+  }
+}
+
 
 ctx.lineWidth = '3';
 
@@ -397,26 +549,31 @@ makeColorPalettes();
 
 // canvas width is 800x600 by default; use these to set the number of elements: 800/width = num cols, 600/height = num rows
 // note that numcols must be < 26, otherwise a conversion must be written to go from column letter to number beyond one character (see .charCodeAt(0)) in all pages
-var numcols = {{ page.numcols }};
-var numrows = {{ page.numrows }};
-var gridwidth = {{ page.canvaswidth }} / numcols;
-var gridheight = {{ page.canvasheight }} / numrows;
+var numcols = 1;
+var numrows = 1;
+var canvaswidth = 500;
+var canvasheight = 300;
+
+
+var gridwidth = canvaswidth / numcols;
+var gridheight = canvasheight / numrows;
 
 // subcols and subrows provide subsquares within each grid element for the individual fill-ins
-var subcols = {{ page.subcols }};
-var subrows = {{ page.subrows }};
+var subcols = 5;
+var subrows = 3;
 
 function gridListeners() {
     canvas.addEventListener('mousedown', fillgrid, false);
 }
 
-{% if page.replaylink %}
 function doReplaySend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorvalue, xsquare, ysquare) {
     message = leftx + "," + topy + "," + gridwidth / subcols + "," + gridheight / subrows + "," + colorvalue + "," + xsquare + "," + ysquare;
     
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "{{ page.replaylink }}/insert?name={{ page.linksuffix }}", true);
-    
+xhr.open('POST', SERVER_URL + '/instance/' + instanceCode + '/insert', true);
+xhr.setRequestHeader('Content-Type', 'application/json');
+xhr.send(JSON.stringify({ data: message }));
+
     xhr.onreadystatechange = function () {
         if (this.readyState != 4) return;
 
@@ -552,7 +709,9 @@ function doReplayDispatch(data) {
             isPageFilledIn[i][j] = '';
         }
     }
-    
+ renderTileSelector();
+autoSelectTile();
+
     console.log("Initial Empty Page Filled In Matrix up to main image row " + numRows + " and main image col " + numCols + ": " + isPageFilledIn);
 
     // fills in in chronological order, so overwritten pages will be overwritten in this history matrix
@@ -591,8 +750,7 @@ function doReplayDispatch(data) {
 
 function doReplayGet() {    
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", "{{ page.replaylink }}/retrieve{% if page.linksuffix %}?name={{page.linksuffix}}{% endif %}", true);
-    
+xhr.open('GET', SERVER_URL + '/instance/' + instanceCode + '/retrieve', true);    
     xhr.onreadystatechange = function () {
         if (this.readyState != 4) return;
 
@@ -609,9 +767,7 @@ function doReplayGet() {
     xhr.send();   
 }
 doReplayGet();
-{% endif %}
 
-{% if page.fayelink %}
 // Pub-sub
 var fayeclient = new Faye.Client('{{ page.fayelink }}/faye');
 
@@ -627,52 +783,47 @@ fayeclient.addExtension({
 
 fayeclient.setHeader("Access-Control-Allow-Origin", "*");
 
+var fayeChannel = '/faye/messages/' + instanceCode;
+
 function doFayeSubscribe() {
-  fayeclient.subscribe('/faye/messages{% if page.linksuffix %}/{{page.linksuffix}}{% endif %}', function(message) {
-    // Don't draw incoming messages
-    console.log("Message: " + message.text);
-    
-    var msg = message.text;
-    var msgparts = msg.split(',');
-    
-    var leftx = msgparts[0];
-    var topy = msgparts[1];
-    var rectwidth = msgparts[2];
-    var rectheight = msgparts[3];
+  fayeclient.subscribe(fayeChannel, function(message) {
+    var msg = message.text, msgparts = msg.split(',');
+
     var rectcolor = msgparts[4];
     var xsquare = msgparts[5];
     var ysquare = msgparts[6];
 
-    // verify the square is within bounds
-    if(ysquare >= 0 && ysquare < numRows * subrows && xsquare >= 0 && xsquare < numCols * subcols && typeof rectcolor !== "undefined" && rectcolor !== "undefined" && rectcolor.length > 0) {
-        isPageFilledIn[ysquare][xsquare] = msg; // fill in the "filled in pages" table
+    if (ysquare >= 0 && ysquare < numRows * subrows &&
+        xsquare >= 0 && xsquare < numCols * subcols &&
+        rectcolor && rectcolor !== 'undefined' && rectcolor.length > 0) {
+
+      isPageFilledIn[ysquare][xsquare] = msg;
     }
-	  
-    // update the set of pages that remain
+
     setPagesThatRemain();
-  });    
+
+    // optional UI refresh
+    if (typeof renderTileSelector === 'function') {
+      renderTileSelector();
+    }
+  });
 }
 
-function doFayeSend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorvalue, xsquare, ysquare) {
-    message = leftx + "," + topy + "," + gridwidth / subcols + "," + gridheight / subrows + "," + colorvalue + "," + xsquare + "," + ysquare;
-    
-    fayeclient.publish('/faye/messages{% if page.linksuffix %}/{{page.linksuffix}}{% endif %}', {
-      text: message
-    });     
+function doFayeSend(leftx, topy, gridwidth, subcols,
+    gridheight, subrows, colorvalue, xsquare, ysquare) {
+
+  var message = [
+    leftx,
+    topy,
+    gridwidth / subcols,
+    gridheight / subrows,
+    colorvalue,
+    xsquare,
+    ysquare
+  ].join(',');
+
+  fayeclient.publish(fayeChannel, { text: message });
 }
-{% endif %}
-
-// call this to initialize the grid; comment to disable
-// this has been moved to an event on the page selector so that it only appears when a page is selected
-makeGrid(canvas.width, canvas.height, gridwidth, gridheight);
-
-// call this to add click listener to fill in rectangle; comment to disable
-gridListeners();
-
-{% if page.fayelink %}
-// call this to set up pub-sub; comment to disable
-doFayeSubscribe();
-{% endif %}
 
 // https://stackoverflow.com/questions/11735856/draw-grid-table-on-canvas-html5
 // bwidth/bheight is the dimension of the canvas board, and rwidth/rheight is the dimension of the rectangle in the grid
@@ -786,15 +937,11 @@ function fillgrid(e) {
     
     drawGridSquare(pageleftx, pagetopy, gridwidth / subcols, gridheight / subrows, colorpicker.value, pagexsquare, pageysquare);
     
-    {% if page.fayelink %}
     // Send message to faye
     doFayeSend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorpicker.value, xsquare, ysquare);
-    {% endif %}
     
-    {% if page.replaylink %}
     // Send to database
     doReplaySend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorpicker.value, xsquare, ysquare);
-    {% endif %}
 }
 </script>
 

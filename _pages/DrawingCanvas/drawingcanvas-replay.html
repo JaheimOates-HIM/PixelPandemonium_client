@@ -3,7 +3,9 @@ layout: default-blankwide
 permalink: /DrawingCanvas
 title: "Pixel Pandemonium"
 excerpt: "Pixel Pandemonium"
-    
+
+serverlink: "http://localhost:8000"
+# Change to your deployed server URL before going live
 canvascolors: 12
     
 numrows: 5
@@ -161,10 +163,64 @@ finishedvideo:
 
 <script type="text/javascript">
 var canvas = document.getElementById('drawCanvas');
+var SERVER_URL = "{{ page.serverlink }}";
 var ctx = canvas.getContext('2d');
 var colorpicker = document.getElementById('colorpicker');
 
 ctx.lineWidth = '3';
+
+var urlParams = new URLSearchParams(window.location.search);
+var instanceCode = urlParams.get('instance');
+
+if (!instanceCode) {
+    document.body.innerHTML = '<h2 style="color:red">No instance code in URL.</h2>';
+    throw new Error('No instance code');
+}
+
+// STEP 2: Luhn-like check digit validation
+function clientValidateCheckDigit(code) {
+    var digits = code.replace(/[^0-9]/g, '');
+    if (digits.length < 2) return false;
+
+    var payload = digits.slice(0, -1), sum = 0, alt = true;
+
+    for (var i = payload.length - 1; i >= 0; i--) {
+        var n = parseInt(payload[i], 10);
+        if (alt) { n *= 2; if (n > 9) n -= 9; }
+        sum += n;
+        alt = !alt;
+    }
+
+    return ((10 - (sum % 10)) % 10) === parseInt(digits.slice(-1), 10);
+}
+
+if (!clientValidateCheckDigit(instanceCode)) {
+    document.body.innerHTML = '<h2 style="color:red">Invalid instance code.</h2>';
+    throw new Error('Invalid check digit');
+}
+
+console.log('Instance validated: ' + instanceCode);
+
+async function validateInstance() {
+    try {
+        var res = await fetch(SERVER_URL + '/instance/' + instanceCode + '/status');
+        var data = await res.json();
+
+        if (!data.valid) {
+            document.body.innerHTML =
+              '<h2 style="color:red">This instance is not active.</h2>' +
+              '<p>' + (data.error || '') + '</p>';
+            return false;
+        }
+
+        return true;
+    } catch (err) {
+        console.error(err);
+        document.body.innerHTML =
+          '<h2 style="color:red">Cannot connect to server.</h2>';
+        return false;
+    }
+}
 
 {% if page.clickable %}
 // https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
@@ -248,25 +304,21 @@ function gridListeners() {
 
 {% if page.replaylink %}
 {% if page.clickable %}
-function doReplaySend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorvalue, xsquare, ysquare) {
-    message = leftx + "," + topy + "," + gridwidth / subcols + "," + gridheight / subrows + "," + colorvalue + "," + xsquare + "," + ysquare;
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", "{{ page.replaylink }}/insert{% if page.linksuffix %}?name={{page.linksuffix}}{% endif %}", true);
-    
-    xhr.onreadystatechange = function () {
-        if (this.readyState != 4) return;
 
-        if (this.status == 200) {
-            var data = JSON.parse(this.responseText);
+// 6.5 update doReplaySend to send grid square info to server for replay
+function doReplaySend(leftx, topy, gridwidth, subcols,
+    gridheight, subrows, colorvalue, xsquare, ysquare) {
+  var message = [leftx, topy, gridwidth/subcols, gridheight/subrows,
+    colorvalue, xsquare, ysquare].join(',');
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', SERVER_URL + '/instance/' + instanceCode + '/insert', true);
+  xhr.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status != 201)
+      console.error('Insert failed: ' + this.status);
+  };
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.send(JSON.stringify({ data: message }));
 
-            console.log("Replay Message Sent");
-        }
-    };
-    
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-    xhr.send("data=" + message);
-}
 {% endif %}
 
 function doReplayDispatch(data, i) {
@@ -304,26 +356,19 @@ function doReplayDispatch(data, i) {
          }, delayTime); 
     }
 }
-
-function doReplayGet() {    
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "{{ page.replaylink }}/retrieve{% if page.linksuffix %}?name={{page.linksuffix}}{% endif %}", true);
-    
-    xhr.onreadystatechange = function () {
-        if (this.readyState != 4) return;
-
-        if (this.status == 200) {
-            var data = JSON.parse(this.responseText);
-
-            console.log("Replay Message Retrieved");
-            console.log(data);
-            
-            doReplayDispatch(data, 0);
-        }
-    };
-    
-    xhr.send();   
+// 6.6 update doReplayGet to retrieve grid square info from server for replay   
+function doReplayGet() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', SERVER_URL + '/instance/' + instanceCode + '/retrieve', true);
+  xhr.onreadystatechange = function() {
+    if (this.readyState != 4) return;
+    if (this.status == 200) {
+      doReplayDispatch(JSON.parse(this.responseText));
+    } else console.error('Retrieve failed: ' + this.status);
+  };
+  xhr.send();
 }
+
 {% endif %}
 
 {% if page.fayelink %}
@@ -341,35 +386,30 @@ fayeclient.addExtension({
 });
 
 fayeclient.setHeader("Access-Control-Allow-Origin", "*");
+//6.7 uodate faye channels
+var fayeChannel = '/faye/messages/' + instanceCode;
 
 function doFayeSubscribe() {
-  fayeclient.subscribe('/faye/messages{% if page.linksuffix %}/{{page.linksuffix}}{% endif %}', function(message) {
-    //console.log("Message: " + message.text);
-    
-    var msg = message.text;
-    var msgparts = msg.split(',');
-    
-    var leftx = msgparts[0];
-    var topy = msgparts[1];
-    var rectwidth = msgparts[2];
-    var rectheight = msgparts[3];
-    var rectcolor = msgparts[4];
-    var xsquare = msgparts[5];
-    var ysquare = msgparts[6];
-    
-    // call drawrect method
-    drawGridSquare(leftx, topy, rectwidth, rectheight, rectcolor, xsquare, ysquare);
-  });    
+  fayeclient.subscribe(fayeChannel, function(message) {
+    var msg = message.text, msgparts = msg.split(',');
+    var rectcolor = msgparts[4], xsquare = msgparts[5], ysquare = msgparts[6];
+    if (ysquare >= 0 && ysquare < numRows * subrows &&
+        xsquare >= 0 && xsquare < numCols * subcols &&
+        rectcolor && rectcolor !== 'undefined' && rectcolor.length > 0) {
+      isPageFilledIn[ysquare][xsquare] = msg;
+    }
+    setPagesThatRemain();
+    if (typeof renderTileSelector === 'function') renderTileSelector();
+  });
 }
 
-{% if page.clickable %}
-function doFayeSend(leftx, topy, gridwidth, subcols, gridheight, subrows, colorvalue, xsquare, ysquare) {
-    message = leftx + "," + topy + "," + gridwidth / subcols + "," + gridheight / subrows + "," + colorvalue + "," + xsquare + "," + ysquare;
-    
-    fayeclient.publish('/faye/messages{% if page.linksuffix %}/{{page.linksuffix}}{% endif %}', {
-      text: message
-    });     
+function doFayeSend(leftx, topy, gridwidth, subcols,
+    gridheight, subrows, colorvalue, xsquare, ysquare) {
+  var message = [leftx, topy, gridwidth/subcols, gridheight/subrows,
+    colorvalue, xsquare, ysquare].join(',');
+  fayeclient.publish(fayeChannel, { text: message });
 }
+
 {% endif %}
 {% endif %}
 
@@ -386,10 +426,17 @@ gridListeners();
 doFayeSubscribe();
 {% endif %}
 
-{% if page.replaylink %}
-// retrieve and draw the board
-doReplayGet();
-{% endif %}
+validateInstance().then(function(valid) {
+    if (valid) {
+        {% if page.replaylink %}
+        doReplayGet();
+        {% endif %}
+
+        {% if page.fayelink %}
+        doFayeSubscribe();
+        {% endif %}
+    }
+});
 
 // https://stackoverflow.com/questions/11735856/draw-grid-table-on-canvas-html5
 // bwidth/bheight is the dimension of the canvas board, and rwidth/rheight is the dimension of the rectangle in the grid

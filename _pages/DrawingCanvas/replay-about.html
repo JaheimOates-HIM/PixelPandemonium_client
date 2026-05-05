@@ -4,6 +4,9 @@ permalink: /About
 title: "About Pixel Pandemonium"
 excerpt: "About Pixel Pandemonium"
 
+# 6.2 define server_url
+serverlink: "http://localhost:8000"
+
 teachervideo: "https://cdnapisec.kaltura.com/p/1513041/sp/151304100/embedIframeJs/uiconf_id/43882971/partner_id/1513041?iframeembed=true&playerId=kaltura_player&entry_id=1_1auznbwp&flashvars[localizationCode]=en&amp;flashvars[leadWithHTML5]=true&amp;flashvars[sideBarContainer.plugin]=true&amp;flashvars[sideBarContainer.position]=left&amp;flashvars[sideBarContainer.clickToClose]=true&amp;flashvars[chapters.plugin]=true&amp;flashvars[chapters.layout]=vertical&amp;flashvars[chapters.thumbnailRotator]=false&amp;flashvars[streamSelector.plugin]=true&amp;flashvars[EmbedPlayer.SpinnerTarget]=videoHolder&amp;flashvars[dualScreen.plugin]=true&amp;flashvars[hotspots.plugin]=1&amp;flashvars[Kaltura.addCrossoriginToIframe]=true&amp;&wid=1_svov520q"
 studentvideo: "https://www.youtube.com/embed/q30CNVHtSI4"
 
@@ -22,7 +25,10 @@ pixelmoreinfotitle: "Pixel Pandemonium"
 <meta http-equiv="Expires" content="0" />
 
 <script language="javascript" type="text/javascript">
+	// 6.2 add in
+	var SERVER_URL = '{{ page.serverlink }}';
 	var NumRefs=0 ;
+
 	function ShowURLinTarget(text,ref,target) 
 	{
 	  document.write("<a HREF=" + ref + " TARGET=" + target + ">" + text + "</a>") ;
@@ -41,7 +47,7 @@ pixelmoreinfotitle: "Pixel Pandemonium"
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 .pixel {
 	font-family: 'Press Start 2P', cursive;
-//	font-family: 'VT323', monospace;
+	font-family: 'VT323', monospace;
 }
 </style>
 
