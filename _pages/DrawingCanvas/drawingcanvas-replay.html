@@ -319,7 +319,6 @@ function doReplaySend(leftx, topy, gridwidth, subcols,
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.send(JSON.stringify({ data: message }));
 }
-{% endif %}
 
 function doReplayDispatch(data, i) {
     console.log("Dispatching row " + i + " of data: " + data + " with length " + data.length + "; data[" + i + "] = " + data[i] + " / " + JSON.stringify(data[i]));
