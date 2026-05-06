@@ -420,11 +420,6 @@ makeGrid(canvas.width, canvas.height, gridwidth, gridheight);
 gridListeners();
 {% endif %}
 
-{% if page.fayelink %}
-// call this to set up pub-sub; comment to disable
-doFayeSubscribe();
-{% endif %}
-
 validateInstance().then(function(valid) {
     if (valid) {
         {% if page.replaylink %}
