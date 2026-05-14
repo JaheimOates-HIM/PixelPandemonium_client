@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pixel Pandemonium</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: white;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      background: #1f2937;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      width: 90%;
+      max-width: 700px;
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+      color: #60a5fa;
+    }
+
+    p {
+      color: #d1d5db;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 90%;
+      padding: 14px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .links {
+      margin-top: 30px;
+    }
+
+    .links a {
+      display: block;
+      margin: 10px 0;
+      color: #93c5fd;
+      text-decoration: none;
+    }
+
+    .links a:hover {
+      text-decoration: underline;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>Pixel Pandemonium 🚀</h1>
+
+    <p>Enter an instance code to open the replay page.</p>
+
+    <input
+      type="text"
+      id="instanceCode"
+      placeholder="TET-MONB-0312-10-28-9"
+    />
+
+    <br />
+
+    <button onclick="openReplay()">
+      Open Replay
+    </button>
+
+    <div id="status"></div>
+
+    <div class="links">
+      <a href="http://localhost:8000/" target="_blank">
+        Local Server
+      </a>
+
+      <a href="https://jaheimoates-him.github.io/PixelPandemonium_client" target="_blank">
+        GitHub Client
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function openReplay() {
+      const code = document
+        .getElementById("instanceCode")
+        .value
+        .trim();
+
+      if (!code) {
+        document.getElementById("status").innerHTML =
+          "❌ Please enter an instance code";
+        return;
+      }
+
+      const replayUrl =
+        "https://jaheimoates-him.github.io/PixelPandemonium_client/_pages/DrawingCanvas/reveal.html?instance=" +
+        code;
+
+      document.getElementById("status").innerHTML =
+        "✅ Opening replay page...";
+
+      window.open(replayUrl, "_blank");
+    }
+  </script>
+
+</body>
+</html>
