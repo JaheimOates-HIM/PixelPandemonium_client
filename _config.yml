@@ -11,7 +11,7 @@ theme: jekyll-theme-slate
 title: "PixelPandemonium_client"
 description: "Coloring using numbers"
 
-url                      : https://JaheimOates_HIM.github.io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
+url                      : https://JaheimOates-HIM.github.io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : "/PixelPandemonium_client" # the subpath of your site, e.g. "/blog"
     
 # Reading Files
