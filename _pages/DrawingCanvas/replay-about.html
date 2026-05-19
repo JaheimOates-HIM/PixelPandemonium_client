@@ -36,8 +36,7 @@ pixelmoreinfotitle: "Pixel Pandemonium"
 		NumRefs = document.links.length - 1 ;
 	  var theRef = document.links[NumRefs++].href ;
 	  var linkColor = document.linkColor ;
-	  document.write(" (" + theRef.fontsize(-1).fontcolor(linkColor).fixed() + ")") ;
-	}
+	document.write(" (<span style='color:" + linkColor + "; font-family: monospace; font-size: smaller;'>" + theRef + "</span>)") ;	}
 </script>
 
 <link HREF="{{site.baseurl}}/assets/css/drawingcanvas.css" REL="stylesheet" TYPE="text/css" /></head>
