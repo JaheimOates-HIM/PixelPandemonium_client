@@ -303,9 +303,8 @@ function gridListeners() {
 {% endif %}
 
 {% if page.replaylink %}
-{% if page.clickable %}
+  {% if page.clickable %}
 
-// 6.5 update doReplaySend to send grid square info to server for replay
 function doReplaySend(leftx, topy, gridwidth, subcols,
     gridheight, subrows, colorvalue, xsquare, ysquare) {
   var message = [leftx, topy, gridwidth/subcols, gridheight/subrows,
@@ -355,19 +354,20 @@ function doReplayDispatch(data, i) {
          }, delayTime); 
     }
 }
-// 6.6 update doReplayGet to retrieve grid square info from server for replay   
+
 function doReplayGet() {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', SERVER_URL + '/instance/' + instanceCode + '/retrieve', true);
   xhr.onreadystatechange = function() {
     if (this.readyState != 4) return;
     if (this.status == 200) {
-      doReplayDispatch(JSON.parse(this.responseText));
+      doReplayDispatch(JSON.parse(this.responseText), 0);
     } else console.error('Retrieve failed: ' + this.status);
   };
   xhr.send();
 }
 
+   {% endif %}
 {% endif %}
 
 {% if page.fayelink %}
@@ -385,15 +385,15 @@ fayeclient.addExtension({
 });
 
 fayeclient.setHeader("Access-Control-Allow-Origin", "*");
-//6.7 uodate faye channels
+
 var fayeChannel = '/faye/messages/' + instanceCode;
 
 function doFayeSubscribe() {
   fayeclient.subscribe(fayeChannel, function(message) {
     var msg = message.text, msgparts = msg.split(',');
     var rectcolor = msgparts[4], xsquare = msgparts[5], ysquare = msgparts[6];
-    if (ysquare >= 0 && ysquare < numRows * subrows &&
-        xsquare >= 0 && xsquare < numCols * subcols &&
+    if (ysquare >= 0 && ysquare < numrows * subrows &&
+        xsquare >= 0 && xsquare < numcols * subcols &&
         rectcolor && rectcolor !== 'undefined' && rectcolor.length > 0) {
       isPageFilledIn[ysquare][xsquare] = msg;
     }
@@ -409,7 +409,6 @@ function doFayeSend(leftx, topy, gridwidth, subcols,
   fayeclient.publish(fayeChannel, { text: message });
 }
 
-{% endif %}
 {% endif %}
 
 // call this to initialize the grid; comment to disable
