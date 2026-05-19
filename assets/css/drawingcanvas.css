@@ -17,7 +17,7 @@ pre {
 }
 
 .headerlabel {
-/*	border: 2px solid #B45B01; /*  Fall  */
+/*	border: 2px solid #B45B01;  Fall  */
 	border: 2px solid #095070; /*  Winter  */
 	margin: 2px;
 	padding-left: 8px;
@@ -25,7 +25,7 @@ pre {
     padding-bottom: 6px ;
 /*	font-family: "Roboto", Arial, Helvetica, sans-serif; */
 	font-family: "Open Sans", Arial, Helvetica, sans-serif;
-	font-weight: bolder; // bold;
+	font-weight: bolder; 
 	color: #EBEDEC; /*  Winter  */
 /*	color: #FFFFCC; /*  Fall  */
 /*	background-image:  url("../images/PragueWall_red rotated.png");
@@ -73,7 +73,6 @@ pre {
 .darkcolor { background-color: #C0C0C0; }
 .mediumcolor { background-color: #A2C0DF; }
 .lightcolor { background-color: #DCE4F1; }
-
 .darkcolor { background-color: #015F84 }
 
 .code {
