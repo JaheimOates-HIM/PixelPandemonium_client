@@ -245,10 +245,17 @@ function showPixelMap(page)
 	{
         if(page === '') {
             // clear the text boxes
-            document.getElementById("thePage").innerHTML = "";
-			      document.getElementById("data").innerHTML = "";
-			      document.getElementById("compressed").innerHTML = "";
-		}
+            if(document.getElementById("thePage") != null) {
+                document.getElementById("thePage").innerHTML = "";
+            }
+            if(document.getElementById("data") != null) {
+                document.getElementById("data").innerHTML = "";
+            }
+            if(document.getElementById("compressed") != null) {
+                document.getElementById("compressed").innerHTML = "";
+            }
+        }
+        
 		var tbl = document.getElementById("pixelChart") ;
 		var topRow = '<table width="50%" border="1" cellspacing="0" cellpadding="10">' ;
 		var interior = "" ;
